@@ -643,3 +643,80 @@ db.air_alliances.aggregate([
 // 6. project isValid and destination airport
 // 7. match only isValid
 // 8. group by destination airport
+
+// Problem 11
+// Lab - $facets
+// How many movies are in both the top ten highest rated movies according to the imdb.rating
+// and the metacritic fields?
+// We should get these results with exactly one access to the database.
+// Hint: What is the intersection?
+db.movies.aggregate([
+  {
+    $match: {
+      metacritic: { $gte: 0 },
+      "imdb.rating": { $gte: 0 },
+    },
+  },
+  {
+    $project: {
+      _id: 0,
+      metacritic: 1,
+      imdb: 1,
+      title: 1,
+    },
+  },
+  {
+    $facet: {
+      top_metacritic: [
+        {
+          $sort: {
+            metacritic: -1,
+            title: 1,
+          },
+        },
+        {
+          $limit: 10,
+        },
+        {
+          $project: {
+            title: 1,
+          },
+        },
+      ],
+      top_imdb: [
+        {
+          $sort: {
+            "imdb.rating": -1,
+            title: 1,
+          },
+        },
+        {
+          $limit: 10,
+        },
+        {
+          $project: {
+            title: 1,
+          },
+        },
+      ],
+    },
+  },
+  {
+    $project: {
+      movies_in_both: {
+        $setIntersection: ["$top_metacritic", "$top_imdb"],
+      },
+    },
+  },
+]);
+// explanation
+// 1. match only documents with metacritic and imdb rating greater than or equal to 0
+// 2. project metacritic, imdb rating, and title
+// 3. facet top metacritic and top imdb
+// 4. sort top metacritic by metacritic and title
+// 5. limit top metacritic to 10
+// 6. project title
+// 7. sort top imdb by imdb rating and title
+// 8. limit top imdb to 10
+// 9. project title
+// 10. project movies_in_both by setIntersection of top_metacritic and top_imdb
